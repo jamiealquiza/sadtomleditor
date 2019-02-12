@@ -84,9 +84,11 @@ func TOMLBytesFromFile(f string) (TOMLBytes, error) {
 
 	for i, _ := range file {
 
-		// Break when the lookahead index
-		// would be the last element.
+		// When the lookahead index would be the,
+		// last element, we're at the final entry.
+		// Append and break.
 		if i == len(file)-2 {
+			d = append(d, file[offset:])
 			break
 		}
 
