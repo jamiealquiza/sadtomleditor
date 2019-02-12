@@ -7,11 +7,20 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 type TOMLBytes [][]byte
 
+type byteJob struct {
+	b  []byte
+	id int
+}
+
 func main() {
+	start := time.Now()
+
 	inFile := flag.String("in-file", "", "Input file")
 	outFile := flag.String("out-file", "", "Output file")
 	contains := flag.String("contains", "", "Comment out entries that contain the provided string")
@@ -23,20 +32,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	var out TOMLBytes
+	var out = make(TOMLBytes, len(data))
+	wg := sync.WaitGroup{}
+	wg.Add(len(data))
+
+	results := make(chan byteJob, len(data))
+
 	// Comment out entries containing x.
-	for _, entry := range data {
-		if strings.Contains(string(entry), *contains) {
-			out = append(out, comment(entry))
-		} else {
-			out = append(out, entry)
-		}
+	for i, entry := range data {
+		go func(wg *sync.WaitGroup, r chan byteJob, entry []byte, id int) {
+			j := byteJob{id: id}
+			if strings.Contains(string(entry), *contains) {
+				j.b = comment(entry)
+			} else {
+				j.b = entry
+			}
+
+			r <- j
+			wg.Done()
+		}(&wg, results, entry, i)
+	}
+
+	wg.Wait()
+	close(results)
+
+	for j := range results {
+		out[j.id] = j.b
 	}
 
 	if err := out.Write(*outFile); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	fmt.Println(time.Since(start))
 }
 
 func comment(d []byte) []byte {
