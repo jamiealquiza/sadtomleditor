@@ -72,7 +72,7 @@ func (t TOMLBytes) Write(f string) error {
 }
 
 // TOMLBytesFromFile returns a TOMLBytes from file f.
-// Sub-array 'entrries' are '[[' delimited.
+// Sub-array 'entries' are '[[' delimited.
 func TOMLBytesFromFile(f string) (TOMLBytes, error) {
 	file, err := ioutil.ReadFile(f)
 	if err != nil {
